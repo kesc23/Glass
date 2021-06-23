@@ -18,40 +18,44 @@ function glassInit()
     }
 }
 
+/**
+ * Function to require an file
+ *
+ * @param string $fileToLoad    File to load in the program
+ * @param string $directory     Path to the file. it accepts path inside constants
+ */
 function glassRequire( string $fileToLoad, string $directory = GLASS_DIR )
 {
     try{
-
-        if ( 0 == file_exists( $directory . $fileToLoad ) )
-        {
-            throw new TypeError('Arquivo Inexistente');
-        }
-
+        if ( 0 == file_exists( $directory . $fileToLoad ) ) : throw new Exception('File DOES NOT Exists');
+        endif;
     } catch (Exception $e) {
-        echo 'Erro Ao Carregar Arquivo: ', $e->getMessage(), "\n";
+        echo '<pre>Error while requiring file "'.$fileToLoad.'": ', $e->getMessage(), "</pre>";
     } finally {
-
-        require_once $directory . $fileToLoad;
-        
-        fileLoadDebug( $fileToLoad, $directory );
+        if ( 1 == file_exists( $directory . $fileToLoad ) ) :
+            require_once $directory . $fileToLoad;
+            fileLoadDebug( $fileToLoad, $directory );
+        endif;
     }
 }
 
-function glassIncludes( string $fileToLoad, string $directory = GLASS_DIR )
+/**
+ * Function to include an file
+ *
+ * @param string $fileToLoad    File to load in the program
+ * @param string $directory     Path to the file. it accepts path inside constants
+ */
+function glassInclude( string $fileToLoad, string $directory = GLASS_DIR )
 {
     try{
-
-        if ( 0 == file_exists( $directory . $fileToLoad ) )
-        {
-            throw new TypeError('Arquivo Inexistente');
-        }
-
-    } catch (Exception $e) {
-        echo 'Erro Ao Carregar Arquivo: ', $e->getMessage(), "\n";
+        if ( 0 == file_exists( $directory . $fileToLoad ) ) : throw new Error('File DOES NOT Exists');
+        endif;
+    } catch (Error $e) {
+        echo '<pre>Error while incluiding file "'.$fileToLoad.'": ', $e->getMessage(), "</pre>";
     } finally {
-
-        include_once $directory . $fileToLoad;
-        
-        fileLoadDebug( $fileToLoad, $directory );
+        if ( 1 == file_exists( $directory . $fileToLoad ) ) :
+            include_once $directory . $fileToLoad;
+            fileLoadDebug( $fileToLoad, $directory );
+        endif;
     }
 }

@@ -14,4 +14,8 @@ enqueueStyles( 'normalStyle' );
 
 $hooks['init']->callHook();
 
+glassInclude('i.php');
+
+glassRequire('i.php');
+
 prePrint_r($hooks);
