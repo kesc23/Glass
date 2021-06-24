@@ -11,15 +11,15 @@ function prePrint_r( $variable )
 {
     $variable = $variable;
 
-    ob_start()
-    ?>
-    <pre><?php print_r($variable) ?></pre>
-    <?php
+    ob_start();
+        ?>
+        <pre><?php print_r($variable) ?></pre>
+        <?php
     ob_end_flush();
 }
 
 function fileLoadDebug( string $fileToLoad, string $directory = GLASS_DIR ){
-    if ( true === DEBUGLOAD ):
+    if ( true === GLASS_DEBUG[ 'LOAD' ] ): //If Debug for files being loaded is active
         echo '<pre>' . $directory . $fileToLoad . '</pre>';
     endif;
 }
@@ -53,10 +53,10 @@ if ( true === GLASS_CLASSES )
      *
      * @since 0.1.0
      * 
-     * @param string $tag
-     * @param callable $functionToAdd
-     * @param array $acceptedArgs
-     * @param integer $priority
+     * @param string    $tag
+     * @param callable  $functionToAdd
+     * @param array     $acceptedArgs
+     * @param integer   $priority
      */
     function addHook( string $tag, callable $functionToAdd, $acceptedArgs = array(), int $priority = 10)
     {
@@ -68,38 +68,62 @@ if ( true === GLASS_CLASSES )
         else:
             $hooks[$tag]->addHook( $tag, $functionToAdd, $acceptedArgs, $priority);
         endif;
+    }
+
+    function doHook( string $handle )
+    {
+        global $hooks;
+        global $execActions;
+
+        if ( isset( $execActions[ $handle ] ) ):
+            $hookError = "You cannot call <code>'{$handle}'</code>: Hook was already Called!";
+            trigger_error( $hookError, E_USER_ERROR );
+        else:
+            $hooks[ $handle ]->callHook();
+            $execActions[ $handle ] = true;
+        endif;
+    }
+
+    function registerStyle( string $tag, string $pathToStyle, string $version = '')
+    {
+        global $styles;
+
+        if ( ! isset( $styles[ $tag ] ) ):
+            $styles[ $tag ] = new Style;
+            $styles[ $tag ]->addStyle( $tag, $pathToStyle, $version);
+        else:
+            $styles[ $tag ]->addStyle( $tag, $pathToStyle, $version);
+        endif;
+        
+    }
+
+    function enqueueStyles( $handle )
+    {
+        global $styles;
+        global $hooks;
+        global $actionNow;
+
+        try {
+            if ( false === $actionNow ):
+                throw new Exception('<code>'. __FUNCTION__ .'()</code> Cannot be called outside Enqueue Styles Hook');
+            endif;
+        } catch (Exception $error) {
+            echo '<pre>Error while enqueuing styles: ', $error->getMessage(), "</pre>";
+            return;
+        }
+
+        $handleArray = $styles[ $handle ];
+        $styleProps = $handleArray->printStyles();
+
+        ob_start();
+            foreach ($styleProps as $style): ?>
+                <link id="<?php echo $style[ 'id' ]; ?>" rel="stylesheet" href="<?php echo $style[ 'path' ] . '?' . $style[ 'version' ]; ?>">
+                <?php
+            endforeach;
+        ob_end_flush();
 
     }
 }
-
-function registerStyle( string $tag, string $pathToStyle, string $version = '')
-{
-    global $styles;
-
-    if ( ! isset( $styles[ $tag ] ) ):
-        $styles[ $tag ] = new Style;
-        $styles[ $tag ]->addStyle( $tag, $pathToStyle, $version);
-    else:
-        $styles[ $tag ]->addStyle( $tag, $pathToStyle, $version);
-    endif;
-    
-}
-
-function enqueueStyles( string $handle )
-{
-    global $styles;
-
-    $styleProps = $styles[$handle]->printStyles();
-
-    ob_start();
-    foreach ($styleProps as $style): ?>
-    <link id="<?php echo $style['id']; ?>" rel="stylesheet" href="<?php echo $style['path'] . '?' . $style['version']; ?>">
-    <?php
-    endforeach;
-    ob_end_flush();
-
-}
-
 
 function sayHello()
 {

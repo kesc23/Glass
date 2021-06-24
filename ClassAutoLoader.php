@@ -8,7 +8,7 @@ function autoload( $class = array())
     {
         glassRequire( 'Class' . $class[$counter] . '.php', CLASSES );
     }
-    require_once CLASSES . 'instances.php';
+    glassRequire( 'instances.php', CLASSES );
 }
 
 $classes = array(
@@ -17,4 +17,4 @@ $classes = array(
     'Voyage',
 );
 
-autoload($classes);
+autoload( $classes );
