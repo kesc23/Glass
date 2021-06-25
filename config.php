@@ -3,8 +3,8 @@
 // Set to true to show loaded files/classes
 define( 'GLASS_DEBUG',
     array(
-        'LOAD' => false,
-        'HOOK' => true,
+        'LOAD' => true,
+        'HOOK' => false,
     )
 );
 
@@ -15,6 +15,7 @@ define( 'GLASS_DEBUG',
 define( 'GLASS_DIR', __DIR__ . '/' );           // Define Root Path
 define( 'INCLUDES', GLASS_DIR . 'includes/');   // Define Includes Path
 define( 'CLASSES', INCLUDES . 'class/' );       // Define Classes path
+define( 'PLUGINS_DIR', GLASS_DIR . 'plugins/' );       // Define Classes path
 
 
 /**

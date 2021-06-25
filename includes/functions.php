@@ -18,6 +18,11 @@ function prePrint_r( $variable )
     ob_end_flush();
 }
 
+function __pre( $variable )
+{
+    prePrint_r( $variable );
+}
+
 function fileLoadDebug( string $fileToLoad, string $directory = GLASS_DIR ){
     if ( true === GLASS_DEBUG[ 'LOAD' ] ): //If Debug for files being loaded is active
         echo '<pre>' . $directory . $fileToLoad . '</pre>';
@@ -65,6 +70,8 @@ if ( true === GLASS_CLASSES )
         if ( ! isset( $hooks[ $tag ] ) ):
             $hooks[$tag] = new Hook;
             $hooks[$tag]->addHook( $tag, $functionToAdd, $acceptedArgs, $priority);
+        elseif ( isset( $hooks[ $tag ]->getCallbacks()[$priority][$functionToAdd] ) ):
+            $hooks[$tag]->addHook( $tag, $functionToAdd, $acceptedArgs, $priority, 1 );
         else:
             $hooks[$tag]->addHook( $tag, $functionToAdd, $acceptedArgs, $priority);
         endif;
@@ -121,7 +128,54 @@ if ( true === GLASS_CLASSES )
                 <?php
             endforeach;
         ob_end_flush();
+    }
 
+    function addPlugin( $pluginName, $author = '', $version = '', $license = '' )
+    {
+        global $plugins;
+
+        $pluginData = array(
+            'plugin name'   => $pluginName,
+            'author'        => $author,
+            'version'       => $version,
+            'license'       => $license
+        );
+
+        $plugins[$pluginName] = new GlassPlugin( $pluginData );
+    }
+
+    function thisPlugin( $pluginFile )
+    {
+        global $plugins;
+        return $plugins[ $pluginFile ];
+    }
+
+    function pluginName( $pluginMainFile )
+    {
+        return basename( $pluginMainFile , '.php');
+    }
+
+    function glassLoadPlugins()
+    {
+        $glassplugins = scandir( PLUGINS_DIR );
+
+        $pluginFolders = null;
+
+        foreach( $glassplugins as $folder ):
+            switch ( $folder ) {
+                case '.':
+                    break;
+                case '..':
+                    break;
+                default:
+                    $pluginFolders[ $folder ] = $folder . '.php';
+                break;
+            }
+        endforeach;
+
+        foreach ($pluginFolders as $folder => $plugin):
+            glassRequire( $plugin, PLUGINS_DIR . $folder . '/' );
+        endforeach;
     }
 }
 

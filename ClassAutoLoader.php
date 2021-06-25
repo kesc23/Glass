@@ -1,13 +1,10 @@
 <?php
 
-function autoload( $class = array())
+function autoload( $classes = array())
 {
-    $total = count($class);
-
-    for ( $counter = 0; $counter < $total; $counter++ )
-    {
-        glassRequire( 'Class' . $class[$counter] . '.php', CLASSES );
-    }
+    foreach( $classes as $class ):
+        glassRequire( 'Class' . $class . '.php', CLASSES );
+    endforeach;
     glassRequire( 'instances.php', CLASSES );
 }
 
@@ -15,6 +12,7 @@ $classes = array(
     'Hook',
     'Styles',
     'Voyage',
+    'Plugins',
 );
 
 autoload( $classes );
