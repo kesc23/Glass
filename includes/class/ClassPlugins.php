@@ -8,14 +8,14 @@
 
 final class GlassPlugin
 {
-    private $pluginName;
-    private $author;
-    private $version;
-    private $license;
-    private $isLoaded;
-    private $isActive;
-    private $path;
-    private $pluginFile;
+    private $pluginName;   //The plugin Name
+    private $author;       //The Plugin Author
+    private $version;      //The plugin Version
+    private $license;      //The plugin License
+    private $isLoaded;     //Checks if the plugin is Loaded
+    private $isActive;     //Checks if the plugin is Activated
+    private $path;         //The plugin folder path
+    private $pluginFile;   //The plugin main file
 
     public function __construct( array $pluginData )
     {
@@ -51,8 +51,6 @@ final class GlassPlugin
 
     public function setPluginFile( $filename )
     {
-        global $plugins;
-
         if( isset( $this->pluginFile ) ) :
             trigger_error( __METHOD__ . ' cannot redefine plugin file', E_USER_ERROR );
         else:

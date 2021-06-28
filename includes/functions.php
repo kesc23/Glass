@@ -23,9 +23,45 @@ function __pre( $variable )
     prePrint_r( $variable );
 }
 
-function fileLoadDebug( string $fileToLoad, string $directory = GLASS_DIR ){
+function preVar_dump( $variable )
+{
+    $variable = $variable;
+
+    ob_start();
+        ?>
+        <pre><?php var_dump($variable) ?></pre>
+        <?php
+    ob_end_flush();
+}
+
+function __dump( $variable )
+{
+    preVar_dump( $variable );
+}
+
+/**
+ * This function prints all the files loaded through glass file loading functions.
+ * 
+ * @see Coreloader.php
+ * @see glassRequire()
+ * @see glassInclude()
+ * 
+ * @since 0.1.0
+ * @since 0.6.0   changed the way it interacts with loaded file info.
+ */
+function fileLoadDebug( ){
     if ( true === GLASS_DEBUG[ 'LOAD' ] ): //If Debug for files being loaded is active
-        echo '<pre>' . $directory . $fileToLoad . '</pre>';
+
+        global $filesLoaded;
+
+        $dump = null;
+
+        foreach( array_keys( $filesLoaded ) as $file ):
+            $dump .= "{$file}<br>";
+        endforeach;
+
+        echo "<pre>{$dump}</pre>";
+
     endif;
 }
 
@@ -130,9 +166,21 @@ if ( true === GLASS_CLASSES )
         ob_end_flush();
     }
 
+    /**
+     * This function adds a plugin to the global variable $glassDB
+     *
+     * @param string $pluginName  required
+     * @param string $author      optional
+     * @param string $version     optional
+     * @param string $license     optional
+     * 
+     * @since 0.3.0
+     * @since 0.6.0  plugin are now restored in global object $glassDB
+     *               instead the global variable $plugins
+     */
     function addPlugin( $pluginName, $author = '', $version = '', $license = '' )
     {
-        global $plugins;
+        global $glassDB;
 
         $pluginData = array(
             'plugin name'   => $pluginName,
@@ -141,7 +189,7 @@ if ( true === GLASS_CLASSES )
             'license'       => $license
         );
 
-        $plugins[$pluginName] = new GlassPlugin( $pluginData );
+        $glassDB->addPlugin( new GlassPlugin( $pluginData ) );
     }
 
     /**
@@ -193,10 +241,11 @@ if ( true === GLASS_CLASSES )
      * Communicate with the database to validate, load and activate the plugin
      * 
      * @since 0.5.0
+     * @since 0.6.0 now using @global $glassDB for storing the plugins.
      */
     function glassLoadPlugins()
     {
-        global $plugins, $glassDB;
+        global $glassDB;
 
         $glassplugins = @scandir( PLUGINS_DIR ); //scans the plugin folder
 
@@ -212,8 +261,11 @@ if ( true === GLASS_CLASSES )
                     break;
                 default:
                     if( file_exists( PLUGINS_DIR . $folder . "/{$folder}.php" ) ):
+
                         $thePluginFile = PLUGINS_DIR . $folder . "/{$folder}.php";
+
                         $pluginData[ $folder ] = @getPluginInfo( $thePluginFile );
+
                         if( isset( $pluginData[ $folder ]['Plugin Name'] ) && ! empty( $pluginData[ $folder ]['Plugin Name'] ) ): //if the plugin has a valid header containing at least its own name
                             $pluginFolders[ $folder ] = $folder . '.php';
                         endif;
@@ -229,8 +281,8 @@ if ( true === GLASS_CLASSES )
             
             addPlugin( $pluginName ); //adds this plugin in the global Variable 'Plugins'
 
-            //This plugin in loop from the global Variable 'Plugins'
-            $thisPlugin = $plugins[ $pluginName ];
+            //This plugin in loop from the global Variable $glassDB
+            $thisPlugin = $glassDB->getPlugin( $pluginName );
             $thisPlugin->setPluginFile( $thisPlugin->getPluginName() );
             $thisPlugin->setPluginPath(); //Set the plugin main file path
             $thisPlugin->setPluginName( $thisPluginName ); //Set the plugin name based on the main plugin file header
@@ -283,7 +335,6 @@ if ( true === GLASS_CLASSES )
      */
     function glassActivatePlugin( GlassPlugin $plugin )
     {
-        global $plugins;
         glassRequire( $plugin->getPluginFile(), $plugin->getPluginPath() );
     }
     
@@ -324,6 +375,40 @@ if ( true === GLASS_CLASSES )
         endforeach;
 
         return $pluginInfo;
+    }
+
+    /**
+     * This function is to be used in the plugins.php page
+     * (or the page you want to set up plugin config i.e. activate/deactivate ).
+     * 
+     * It verifies if:
+     * 
+     * 1 - is set the activate command, to activate a specific plugin.
+     * 2 - is set the deactivate command, to deactivate a specific plugin.
+     * 3 - is set the plugin delete command, to delete a specific plugin.
+     * 
+     * @since 0.6.0
+     */
+    function getPluginsState()
+    {
+        global $glassDB;
+
+        if( isset( $_GET[ 'pluginActivate' ] ) ):
+            $pluginToActivate = $_GET[ 'pluginActivate' ];
+            $glassDB->activatePlugin($pluginToActivate);
+        endif;
+        if( isset( $_GET[ 'pluginDeactivate' ] ) ):
+            $pluginToDeactivate = $_GET[ 'pluginDeactivate' ];
+            $glassDB->deactivatePlugin($pluginToDeactivate);
+        endif;
+        if( isset( $_GET[ 'pluginDelete' ] ) ):
+            $pluginId = $_GET[ 'pluginDelete' ];    
+            if( $glassDB->selectThePlugin( $pluginId )['activated'] == 1 ):
+                header('plugins.php');
+            else:
+                $glassDB->deletePlugin( $pluginId );
+            endif;
+        endif;
     }
 
 }

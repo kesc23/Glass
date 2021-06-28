@@ -10,11 +10,11 @@
  */
 final class GlassDB
 {
-    private $db_host; //The host
-    private $db_user; //the host user
-    private $db_password; //the host user passoword
-    private $db_name; //Database name;
-    private $connection; //the connection data for communicating with the SQL server
+    private $db_host;      //The host
+    private $db_user;      //the host user
+    private $db_password;  //the host user passoword
+    private $db_name;      //Database name;
+    private $connection;   //the connection data for communicating with the SQL server
     
     //our tables
     private $plugins; //used to verify the plugins inside the program;
@@ -178,6 +178,42 @@ final class GlassDB
         $stmt = $this->getConnection()->prepare($sql);
 
         $stmt->execute();
+    }
+
+    /**
+     * This function adds a GlassPlugin obj plugin
+     * to the @global $glassDB database abstraction object
+     *
+     * @since 0.6.0
+     * 
+     * @param      GlassPlugin $plugin
+     * @subpackage GlassDB
+     * @subpackage Plugins
+     */
+    public function addPlugin( GlassPlugin $plugin )
+    {
+        $this->plugins[ $plugin->getPluginName() ] = $plugin;
+    }
+
+    /**
+     * This function returns an existing
+     * GlassPlugin Object from the @global $glassDB.
+     *
+     * @since 0.6.0
+     * 
+     * @param      string $pluginName
+     * @return     GlassPlugin          Returns a plugin.
+     * @subpackage GlassDB
+     * @subpackage Plugins
+     */
+    public function getPlugin( $pluginName )
+    {
+        //This is used for verifying and deleting existing data in DB about exluded plugins.
+        if( ! isset( $this->plugins[ $pluginName ] ) && isset( $this->selectPluginNames()[ $pluginName ] ) ):
+            $this->deletePlugin( $this->selectPluginNames()[ $pluginName ]['id'] );
+        else:
+            return $this->plugins[ $pluginName ];
+        endif;
     }
 
     /**
