@@ -144,23 +144,66 @@ if ( true === GLASS_CLASSES )
         $plugins[$pluginName] = new GlassPlugin( $pluginData );
     }
 
-    function thisPlugin( $pluginFile )
-    {
-        global $plugins;
-        return $plugins[ $pluginFile ];
-    }
+    /**
+     * Undocumented function
+     *
+     * @param string $pluginFile  Plugin filename
+     * @return GlassPlugin        Plugin object in the 'plugin' global variable
+     *
+     * function thisPlugin( $pluginFile )
+     * {
+     *      global $plugins;
+     *      return $plugins[ $pluginFile ];
+     * }
+     */
 
+    /**
+     * This function returns a the plugin filename without the file extension
+     *
+     * @since 0.5.0
+     * 
+     * @param string $pluginMainFile the plugin filename
+     * @return string
+     */
     function pluginName( $pluginMainFile )
     {
         return basename( $pluginMainFile , '.php');
     }
 
+    /**
+     * This function returns a the plugin object
+     * in the 'plugins' global variable
+     * based in the plugin's filename without the file extension
+     *
+     * @since 0.5.0
+     * 
+     * @param string $filename the plugin filename
+     * @return string
+     * function initializePlugin( $filename )
+     * {
+     *      global $plugins;
+     *      return $plugins[ basename( $filename , '.php' ) ];
+     * }
+     */
+    
+
+    /**
+     * This Function once triggered, loads all plugins inside the Plugins folder.
+     * Verify the existance of a valid header in the main plugin file,
+     * Communicate with the database to validate, load and activate the plugin
+     * 
+     * @since 0.5.0
+     */
     function glassLoadPlugins()
     {
-        $glassplugins = scandir( PLUGINS_DIR );
+        global $plugins, $glassDB;
+
+        $glassplugins = @scandir( PLUGINS_DIR ); //scans the plugin folder
 
         $pluginFolders = null;
 
+        // Define, from the folder's name, the proper plugin filename.
+        if( empty( $glassplugins ) ): return; endif;
         foreach( $glassplugins as $folder ):
             switch ( $folder ) {
                 case '.':
@@ -168,15 +211,212 @@ if ( true === GLASS_CLASSES )
                 case '..':
                     break;
                 default:
-                    $pluginFolders[ $folder ] = $folder . '.php';
+                    if( file_exists( PLUGINS_DIR . $folder . "/{$folder}.php" ) ):
+                        $thePluginFile = PLUGINS_DIR . $folder . "/{$folder}.php";
+                        $pluginData[ $folder ] = @getPluginInfo( $thePluginFile );
+                        if( isset( $pluginData[ $folder ]['Plugin Name'] ) && ! empty( $pluginData[ $folder ]['Plugin Name'] ) ): //if the plugin has a valid header containing at least its own name
+                            $pluginFolders[ $folder ] = $folder . '.php';
+                        endif;
+                    endif;
                 break;
             }
         endforeach;
 
-        foreach ($pluginFolders as $folder => $plugin):
-            glassRequire( $plugin, PLUGINS_DIR . $folder . '/' );
+        foreach( $pluginFolders as $plugin ):
+
+            $pluginName  = basename( $plugin, '.php' );
+            $thisPluginName = $pluginData[ $pluginName ]['Plugin Name']; //this plugin name in the plugin header;
+            
+            addPlugin( $pluginName ); //adds this plugin in the global Variable 'Plugins'
+
+            //This plugin in loop from the global Variable 'Plugins'
+            $thisPlugin = $plugins[ $pluginName ];
+            $thisPlugin->setPluginFile( $thisPlugin->getPluginName() );
+            $thisPlugin->setPluginPath(); //Set the plugin main file path
+            $thisPlugin->setPluginName( $thisPluginName ); //Set the plugin name based on the main plugin file header
+
+            if( ! isset( $glassDB->selectPluginNames()[ $pluginName ] ) ):
+                $glassDB->addPlugins( $pluginName );
+            endif;
+
+            //This Plugin in loop from database
+            $loadedPlugins = $glassDB->selectPluginNames()[ $pluginName ];
+
+            //Set the author name from the plugin file header
+            if( isset( $pluginData[ $pluginName ]['Author'] ) ):
+                $thisPlugin->setAuthor( $pluginData[ $pluginName ]['Author'] );
+                $glassDB->updatePluginInfo( $loadedPlugins[ 'id' ] , 'Author', $pluginData[ $pluginName ]['Author'] );
+            endif;
+
+            //Set the license from the plugin file header
+            if( isset( $pluginData[ $pluginName ]['License'] ) ):
+                $thisPlugin->setLicense( $pluginData[ $pluginName ]['License'] );
+                $glassDB->updatePluginInfo( $loadedPlugins[ 'id' ] , 'License', $pluginData[ $pluginName ]['License'] );
+            endif;
+
+            //Set the Plugin version from the plugin file header
+            if( isset( $pluginData[ $pluginName ]['Version'] ) ):
+                $thisPlugin->setVersion( $pluginData[ $pluginName ]['Version'] );
+                $glassDB->updatePluginInfo( $loadedPlugins[ 'id' ] , 'Version', $pluginData[ $pluginName ]['Version'] );
+            endif;
+
+            /**
+             * if the plugin is active on the db, is activated in 'plugins' global variable
+             * then we load its files.
+             */
+            if( true == $loadedPlugins['activated'] ):
+                $thisPlugin->activatePlugin();
+                glassActivatePlugin( $thisPlugin );
+            endif;
+
         endforeach;
+
     }
+
+    /**
+     * This function loads the required main file for the plugin
+     * based on a GlassPlugin object
+     *
+     * @since 0.5.0
+     * 
+     * @param GlassPlugin $plugin
+     */
+    function glassActivatePlugin( GlassPlugin $plugin )
+    {
+        global $plugins;
+        glassRequire( $plugin->getPluginFile(), $plugin->getPluginPath() );
+    }
+    
+    /**
+     * This function reads the first docblock inside a plugin file
+     * the retrive from it key info about the plugin, such as:
+     * Plugin Name, Author, Version and License
+     * 
+     * @since 0.5.0
+     *
+     * @param string $pluginFile  The plugin main file, to be analyzed
+     * @return array              The plugin data inside the plugin header
+     */
+    function getPluginInfo( $pluginFile )
+    {
+        $block = file_get_contents( $pluginFile );
+
+        $infoStart = strpos( $block, '/**' );
+        $infoEnd = strpos( $block, '*/' );
+
+        $pluginInfo = null;
+
+        for( $index = 0; $index < strlen($block); $index++ )
+        {
+            if( $index >= $infoStart + 8 && $index < $infoEnd ):
+                $pluginInfo .= $block[ $index ];
+            endif;
+        }
+
+        $pluginInfo = explode( '* ', $pluginInfo );
+
+        foreach( $pluginInfo as $descline ):
+            $knewIt[] = explode( ': ', $descline );
+        endforeach;
+        $pluginInfo = null;
+        foreach( $knewIt as $meta ):
+            $pluginInfo[ trim( $meta[0] ) ] = trim( $meta[1] );
+        endforeach;
+
+        return $pluginInfo;
+    }
+
+}
+
+/**
+ * This plugin is usefil to gather files inside folders and subfolders.
+ * 
+ * it can be used for actions such as
+ * deleting a folder ( which needs to be empty before deletion ).
+ * 
+ * @since 0.5.0
+ *
+ * @param string $pathPrefix  the initial path for start searching. 
+ * @return array              The array containing the files in folders/subfolders given
+ */
+function readFolders( $pathPrefix )
+{
+    $folders[] = $pathPrefix;
+    $files = array();
+
+    startscan: //where we may need to iterate in case we haven't read all subfolders.
+    foreach( $folders as $folder ):
+
+        $scanned = scandir( $folder, 1 );
+
+        foreach( $scanned as $item ):
+
+            $actualItem = $folder.$item;
+    
+            if( ! is_dir( $actualItem ) ):
+                if( ! in_array( $actualItem.'/', $files ) ):
+                    $files[$actualItem] = 1;
+                    continue;
+                endif;
+            endif;
+
+            if( $item == '.' || $item == '..' ): continue; endif;
+            if( in_array( $actualItem.'/', $folders ) ): continue; endif;
+            $folders[] = $actualItem.'/';
+    
+        endforeach;
+
+        while( @$i <= count( $folders ) + 1 ):
+            @$i++;
+            goto startscan;
+        endwhile;
+
+    endforeach;
+
+    krsort( $folders );
+
+    $newFiles = array();
+
+    foreach( array_keys( $files ) as $file ):
+        $newFiles[] = $file;
+    endforeach;
+
+    $files = null;
+
+    foreach( $newFiles as $file ):
+        $files[] = $file;
+    endforeach;
+
+    $result = array(
+        'folders' => $folders,
+        'files'   => $files,
+    );
+
+    return $result;
+}
+
+/**
+ * This function deletes files in the paths parsed throught the parameter
+ *
+ * @since 0.5.0
+ * 
+ * @param array $fileArray  The paths for the files.
+ */
+function deleteFiles( $fileArray )
+{
+    foreach( $fileArray as $file ): unlink( $file ); endforeach;
+}
+
+/**
+ * This function deletes folders in the paths parsed throught the parameter
+ *
+ * @since 0.5.0
+ * 
+ * @param array $folderArray  The paths for the folders.
+ */
+function deleteFolders( $folderArray )
+{
+    foreach ($folderArray as $folder ): rmdir( $folder ); endforeach;
 }
 
 function sayHello()

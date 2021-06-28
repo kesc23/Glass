@@ -4,7 +4,7 @@
 define( 'GLASS_DEBUG',
     array(
         'LOAD' => true,
-        'HOOK' => false,
+        'HOOK' => true,
     )
 );
 
@@ -22,5 +22,15 @@ define( 'PLUGINS_DIR', GLASS_DIR . 'plugins/' );       // Define Classes path
  * Define general constants to Glass Packages
  */
 define( 'GLASS_CLASSES', true );
+
+
+/**
+ * Define the constants for the Glass Database:
+ * Insert them as in your server.
+ */
+define( 'GLASS_HOST', '127.1.2.3:3306' );
+define( 'GLASS_HOST_USER', 'root' );
+define( 'GLASS_HOST_PASS', '' );
+define( 'GLASS_DB', 'glass' );
 
 require_once 'CoreLoader.php';

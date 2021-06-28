@@ -13,6 +13,7 @@ $classes = array(
     'Styles',
     'Voyage',
     'Plugins',
+    'GlassDB',
 );
 
 autoload( $classes );
