@@ -420,38 +420,48 @@ if ( true === GLASS_CLASSES )
  * deleting a folder ( which needs to be empty before deletion ).
  * 
  * @since 0.5.0
+ * @since 0.6.1  optimized the way it loads the files and folders.
  *
  * @param string $pathPrefix  the initial path for start searching. 
  * @return array              The array containing the files in folders/subfolders given
  */
 function readFolders( $pathPrefix )
 {
-    $folders[] = $pathPrefix;
+    $timeToComplete = gettimeofday()['sec'];
+
+    $folders[$pathPrefix] = 1;
+    $resultFolders[] = $pathPrefix;
     $files = array();
+    $scannedFolders = array();
 
     startscan: //where we may need to iterate in case we haven't read all subfolders.
-    foreach( $folders as $folder ):
+    foreach( array_keys( $folders ) as $folder ):
 
-        $scanned = scandir( $folder, 1 );
+        $scanned = scandir( $folder );
+        unset( $folders[ $folder ] );
 
         foreach( $scanned as $item ):
 
             $actualItem = $folder.$item;
     
             if( ! is_dir( $actualItem ) ):
-                if( ! in_array( $actualItem.'/', $files ) ):
-                    $files[$actualItem] = 1;
+                if( isset( $files[ $actualItem ] ) ):
                     continue;
+                else:
+                    $files[$actualItem] = 1;
                 endif;
+                continue;
             endif;
 
             if( $item == '.' || $item == '..' ): continue; endif;
-            if( in_array( $actualItem.'/', $folders ) ): continue; endif;
-            $folders[] = $actualItem.'/';
-    
+            if( in_array( $actualItem.'/', array_keys( $folders ) ) ):
+                continue;
+            endif;
+            $folders[ $actualItem.'/' ] = 1;
+            $resultFolders[] = $actualItem.'/';
         endforeach;
 
-        while( @$i <= count( $folders ) + 1 ):
+        while( @$i <= count( $resultFolders ) ):
             @$i++;
             goto startscan;
         endwhile;
@@ -461,19 +471,25 @@ function readFolders( $pathPrefix )
     krsort( $folders );
 
     $newFiles = array();
-
+    
     foreach( array_keys( $files ) as $file ):
         $newFiles[] = $file;
     endforeach;
 
     $files = null;
-
+    
     foreach( $newFiles as $file ):
         $files[] = $file;
     endforeach;
+    
+
+    $last = gettimeofday()['sec'];
+
+    $timeToComplete = $last - $timeToComplete;
 
     $result = array(
-        'folders' => $folders,
+        'time'    => $timeToComplete,
+        'folders' => $resultFolders,
         'files'   => $files,
     );
 
