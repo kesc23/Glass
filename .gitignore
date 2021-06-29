@@ -1,4 +1,5 @@
 /index.php
 /config.php
-Plugins/**
+/Plugins/**
+! /Plugins/index.php
 /plugins.php
