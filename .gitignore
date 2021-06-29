@@ -1,5 +1,5 @@
-index.php
-config.php
-plugins/**
-! plugins/index.php
-plugins.php
+/index.php
+/config.php
+/plugins/**
+!/plugins/index.php
+/plugins.php
