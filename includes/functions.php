@@ -5,7 +5,6 @@
  * @since 0.1.0
  *
  * @param mixed $variable
- * @return string
  */
 function prePrint_r( $variable )
 {
@@ -313,7 +312,8 @@ if ( true === GLASS_CLASSES )
             endif;
 
             /**
-             * if the plugin is active on the db, is activated in 'plugins' global variable
+             * if the plugin is active on the database,
+             * is now activated in @global $glassDB
              * then we load its files.
              */
             if( true == $loadedPlugins['activated'] ):
@@ -421,12 +421,20 @@ if ( true === GLASS_CLASSES )
  * 
  * @since 0.5.0
  * @since 0.6.1  optimized the way it loads the files and folders.
+ * @since 0.6.2  prevented malfunction by forgetting slashes at the end of the path
  *
  * @param string $pathPrefix  the initial path for start searching. 
  * @return array              The array containing the files in folders/subfolders given
  */
 function readFolders( $pathPrefix )
 {
+    $pathLastCharachter = $pathPrefix[ strlen($pathPrefix) - 1 ];
+
+    //in case the path is missing a fwr/bck slash, it will be added preventing mistakes.
+    if( $pathLastCharachter != '/' && $pathLastCharachter != '\\' ):
+        $pathPrefix .= '/';
+    endif;
+
     $timeToComplete = gettimeofday()['sec'];
 
     $folders[$pathPrefix] = 1;
@@ -465,6 +473,86 @@ function readFolders( $pathPrefix )
             @$i++;
             goto startscan;
         endwhile;
+
+    endforeach;
+
+    krsort( $folders );
+
+    $newFiles = array();
+    
+    foreach( array_keys( $files ) as $file ):
+        $newFiles[] = $file;
+    endforeach;
+
+    $files = null;
+    
+    foreach( $newFiles as $file ):
+        $files[] = $file;
+    endforeach;
+    
+
+    $last = gettimeofday()['sec'];
+
+    $timeToComplete = $last - $timeToComplete;
+
+    $result = array(
+        'time'    => $timeToComplete,
+        'folders' => $resultFolders,
+        'files'   => $files,
+    );
+
+    return $result;
+}
+
+/**
+ * This function works similar as readFolders(), but it reads only one folder.
+ * 
+ * @since 0.6.2
+ *
+ * @param string $pathPrefix  the path to be scanned.
+ * @return array
+ */
+function readFolder( $pathPrefix )
+{
+    $pathLastCharachter = $pathPrefix[ strlen($pathPrefix) - 1 ];
+
+    //in case the path is missing a fwr/bck slash, it will be added preventing mistakes.
+    if( $pathLastCharachter != '/' && $pathLastCharachter != '\\' ):
+        $pathPrefix .= '/';
+    endif;
+
+    $timeToComplete = gettimeofday()['sec'];
+
+    $folders[$pathPrefix] = 1;
+    $resultFolders[] = $pathPrefix;
+    $files = array();
+    $scannedFolders = array();
+
+    foreach( array_keys( $folders ) as $folder ):
+
+        $scanned = scandir( $folder );
+        unset( $folders[ $folder ] );
+
+        foreach( $scanned as $item ):
+
+            $actualItem = $folder.$item;
+    
+            if( ! is_dir( $actualItem ) ):
+                if( isset( $files[ $actualItem ] ) ):
+                    continue;
+                else:
+                    $files[$actualItem] = 1;
+                endif;
+                continue;
+            endif;
+
+            if( $item == '.' || $item == '..' ): continue; endif;
+            if( in_array( $actualItem.'/', array_keys( $folders ) ) ):
+                continue;
+            endif;
+            $folders[ $actualItem.'/' ] = 1;
+            $resultFolders[] = $actualItem.'/';
+        endforeach;
 
     endforeach;
 
