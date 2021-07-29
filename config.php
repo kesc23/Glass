@@ -4,7 +4,7 @@
 define( 'GLASS_DEBUG',
     array(
         'LOAD' => true,
-        'HOOK' => false,
+        'HOOK' => true,
     )
 );
 
