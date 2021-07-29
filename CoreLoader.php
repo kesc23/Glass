@@ -24,11 +24,7 @@ function glassInit()
     //Always Require Core Functions to run
     glassRequire( 'functions.php', INCLUDES );
 
-    if ( true === GLASS_CLASSES )
-    {
-        glassRequire( 'ClassAutoLoader.php' );
-    }
-    
+    if( true === GLASS_CLASSES ): glassRequire( 'ClassAutoLoader.php' ); endif;    
 
     if( isset( $filesLoaded[ CLASSES . 'ClassHook.php' ] ) ):
         addhook( 'init', 'fileLoadDebug', '', 15 );
