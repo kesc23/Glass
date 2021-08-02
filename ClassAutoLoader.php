@@ -14,6 +14,7 @@ $classes = array(
     'Voyage',
     'Plugins',
     'GlassDB',
+    'ApiConsummer',
 );
 
 autoload( $classes );
