@@ -49,15 +49,19 @@ Class ApiConsummer
             case 'POST':
                 $post_field = json_encode( (object) $post_fields );
     
-                $request_options[CURLOPT_POST]       = true;
-                $request_options[CURLOPT_POSTFIELDS] = $post_field;
+                $request_options[ CURLOPT_POST ]       = true;
+                $request_options[ CURLOPT_POSTFIELDS ] = $post_field;
             break;
 
             case 'PATCH':
                 $post_field = json_encode( (object) $post_fields );
     
-                $request_options[CURLOPT_CUSTOMREQUEST] = 'PATCH';
-                $request_options[CURLOPT_POSTFIELDS]    = $post_field;
+                $request_options[ CURLOPT_CUSTOMREQUEST ] = 'PATCH';
+                $request_options[ CURLOPT_POSTFIELDS ]    = $post_field;
+            break;
+
+            case 'GET':
+                $request_options[ CURLOPT_HTTPGET ] = true;
             break;
 
             default:
@@ -70,11 +74,15 @@ Class ApiConsummer
 
         curl_close( $ch );
 
-        if( $json_decode == true ):
-            return json_decode( $response, true );
-        else:
-            return $response;
-        endif;
+        if( true == $return ){
+
+            if( $json_decode == true ):
+                return json_decode( $response, true );
+            else:
+                return $response;
+            endif;
+
+        }
     }
 
     public function get_url() : string
@@ -97,7 +105,7 @@ Class ApiConsummer
         return $this->query;
     }
 
-    public function set_query( string $query )
+    public function set_query( string $query = '' )
     {
         $this->query = $query;
         $this->set_api_url();
