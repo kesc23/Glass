@@ -4,3 +4,5 @@
 !/plugins/index.php
 /plugins.php
 /update
+/keys/token.*
+/keys/update*
