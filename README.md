@@ -47,9 +47,15 @@ They do seem equal, following the same differences shared between require and in
   </tr>
   <tr>
     <td>
-      <img src="https://flat.badgen.net/badge/Twitter/@kevin_esc23/blue?icon=twitter" >
-      <img src="https://flat.badgen.net/badge/Instagram/_kevin.campos/purple?icon=https://www.logo.wine/a/logo/Instagram/Instagram-Glyph-White-Logo.wine.svg" >
-      <img src="https://flat.badgen.net/badge/Fiverr/kesc23/green?icon=https://cdn.worldvectorlogo.com/logos/fiverr-1.svg" >
+      <a href="https://twitter.com/kevin_esc23" target="_blank" >
+        <img src="https://flat.badgen.net/badge/Twitter/@kevin_esc23/blue?icon=twitter" >
+      </a>
+      <a href="https://instagram.com/_kevin.campos" target="_blank" >
+        <img src="https://flat.badgen.net/badge/Instagram/_kevin.campos/purple?icon=https://www.logo.wine/a/logo/Instagram/Instagram-Glyph-White-Logo.wine.svg" >
+      </a>
+      <a href="https://fiverr.com/users/kesc23/" target="_blank" >
+        <img src="https://flat.badgen.net/badge/Fiverr/kesc23/green?icon=https://cdn.worldvectorlogo.com/logos/fiverr-1.svg" >
+      </a>
     </td>
   </tr>
 </table>
