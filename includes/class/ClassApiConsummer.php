@@ -1,4 +1,5 @@
 <?php
+namespace MartinFields\Glass;
 
 /**
  * Class ApiConsummer
@@ -7,24 +8,24 @@
  * 
  * @since 0.6.2
  */
-Class ApiConsummer
+Class APIConsummer
 {
     public $url;
     public $query;
     public $headers = array();
     public $request_url;
 
-    public function get_request( bool $ssl = true, bool $return = false, bool $json_decode = false )
+    public function get_request( bool $ssl = true, bool $return = false, bool $json_decode = false, array $post_fields = [] )
     {
-        return $this->request( $return, $ssl, $json_decode );
+        return $this->request( $return, $ssl, $json_decode, 'GET', $post_fields );
     }
 
-    public function post_request( bool $ssl = true, bool $return = false, $json_decode = false, $post_fields = [] )
+    public function post_request( bool $ssl = true, bool $return = false, $json_decode = false, array $post_fields = [] )
     {
         return $this->request( $return, $ssl, $json_decode, 'POST', $post_fields );
     }
 
-    public function patch_request( bool $ssl = true, bool $return = false, $json_decode = false, $post_fields = [] )
+    public function patch_request( bool $ssl = true, bool $return = false, $json_decode = false, array $post_fields = [] )
     {
         return $this->request( $return, $ssl, $json_decode, 'PATCH', $post_fields );
     }
@@ -61,9 +62,13 @@ Class ApiConsummer
             break;
 
             case 'GET':
-                $request_options[ CURLOPT_HTTPGET ] = true;
-            break;
+                $request_options[ CURLOPT_CUSTOMREQUEST ] = 'GET';
 
+                if( ! empty( $post_fields ) )
+                {
+                    $request_options[ CURLOPT_POSTFIELDS ] = json_encode( (object) $post_fields );
+                }
+                    break;
             default:
             break;
         }
@@ -92,7 +97,7 @@ Class ApiConsummer
 
     public function set_url( string $url )
     {
-        $this->url = $url;
+        $this->url = rtrim( $url, '/' ) . '/';
     }
 
     public function set_headers( array $headers )
@@ -107,7 +112,7 @@ Class ApiConsummer
 
     public function set_query( string $query = '' )
     {
-        $this->query = $query;
+        $this->query = ltrim( $query, '/' );
         $this->set_api_url();
     }
 
