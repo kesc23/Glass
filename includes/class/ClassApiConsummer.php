@@ -20,7 +20,7 @@ Class APIConsummer
         return $this->request( $return, $ssl, $json_decode, 'GET', $post_fields );
     }
 
-    public function post_request( bool $ssl = true, bool $return = false, $json_decode = false, array $post_fields = [] )
+    public function post_request( bool $ssl = true, bool $return = false, $json_decode = false, $post_fields = [] )
     {
         return $this->request( $return, $ssl, $json_decode, 'POST', $post_fields );
     }
@@ -48,8 +48,19 @@ Class APIConsummer
         switch( $method ){
 
             case 'POST':
-                $post_field = json_encode( (object) $post_fields );
-    
+                foreach( $this->headers as $header )
+                {
+                    if( 1 === preg_match( '/^content-type:[ ]+?application\/x-www-form-urlencoded$/', $header ) ):
+                        $formenc = 1 ;
+                    endif;
+                }
+
+                if( isset( $formenc ) ):
+                    $post_field = $post_fields;
+                else:
+                    $post_field = json_encode( (object) $post_fields );
+                endif;
+                
                 $request_options[ CURLOPT_POST ]       = true;
                 $request_options[ CURLOPT_POSTFIELDS ] = $post_field;
             break;

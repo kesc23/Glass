@@ -1,4 +1,6 @@
 <?php
+use MartinFields\Glass\APIConsummer;
+
 /**
  * This Function returns preformated info of a variable, object & etc;
  * 
@@ -11,12 +13,19 @@ function prePrint_r( $variable )
     $variable = $variable;
 
     ob_start();
-        ?>
-        <pre><?php print_r($variable) ?></pre>
-        <?php
+    ?>
+    <pre class="glass_pre"><?php print_r( $variable ) ?></pre>
+    <?php
     ob_end_flush();
 }
 
+/**
+ * An alias for prePrint_r
+ *
+ * @param $variable
+ * 
+ * @since 0.5.0
+ */
 function __pre( $variable )
 {
     prePrint_r( $variable );
@@ -48,20 +57,20 @@ function __dump( $variable )
  * @since 0.1.0
  * @since 0.6.0   changed the way it interacts with loaded file info.
  */
-function fileLoadDebug( ){
-    if ( true === GLASS_DEBUG[ 'LOAD' ] ): //If Debug for files being loaded is active
-
+function file_load_log()
+{
+    if ( true === GLASS_DEBUG[ 'LOAD' ] ) // If Debug for files being loaded is active
+    {
         global $filesLoaded;
 
         $dump = null;
 
         foreach( array_keys( $filesLoaded ) as $file ):
-            $dump .= "{$file}<br>";
+            $dump .= "{$file}\n";
         endforeach;
 
-        echo "<pre>{$dump}</pre>";
-
-    endif;
+        echo "<pre>" . str_replace( '\\', '/', $dump ) . "</pre>";
+    }
 }
 
 /**
@@ -192,19 +201,6 @@ if ( true === GLASS_CLASSES )
     }
 
     /**
-     * Undocumented function
-     *
-     * @param string $pluginFile  Plugin filename
-     * @return GlassPlugin        Plugin object in the 'plugin' global variable
-     *
-     * function thisPlugin( $pluginFile )
-     * {
-     *      global $plugins;
-     *      return $plugins[ $pluginFile ];
-     * }
-     */
-
-    /**
      * This function returns a the plugin filename without the file extension
      *
      * @since 0.5.0
@@ -216,23 +212,6 @@ if ( true === GLASS_CLASSES )
     {
         return basename( $pluginMainFile , '.php');
     }
-
-    /**
-     * This function returns a the plugin object
-     * in the 'plugins' global variable
-     * based in the plugin's filename without the file extension
-     *
-     * @since 0.5.0
-     * 
-     * @param string $filename the plugin filename
-     * @return string
-     * function initializePlugin( $filename )
-     * {
-     *      global $plugins;
-     *      return $plugins[ basename( $filename , '.php' ) ];
-     * }
-     */
-    
 
     /**
      * This Function once triggered, loads all plugins inside the Plugins folder.
@@ -273,12 +252,14 @@ if ( true === GLASS_CLASSES )
             }
         endforeach;
 
+        if( ! $pluginFolders ): return; endif;
+
         foreach( $pluginFolders as $plugin ):
 
             $pluginName  = basename( $plugin, '.php' );
             $thisPluginName = $pluginData[ $pluginName ]['Plugin Name']; //this plugin name in the plugin header;
             
-            addPlugin( $pluginName ); //adds this plugin in the global Variable 'Plugins'
+            addPlugin( $pluginName );
 
             //This plugin in loop from the global Variable $glassDB
             $thisPlugin = $glassDB->getPlugin( $pluginName );
@@ -350,10 +331,14 @@ if ( true === GLASS_CLASSES )
      */
     function getPluginInfo( $pluginFile )
     {
+        $content = file_get_contents( $pluginFile );
+
+        if( ! ( 0 === strpos( $content, '<?php' ) ) ): return ''; endif;
+
         $block = file_get_contents( $pluginFile );
 
         $infoStart = strpos( $block, '/**' );
-        $infoEnd = strpos( $block, '*/' );
+        $infoEnd   = strpos( $block, '*/' );
 
         $pluginInfo = null;
 
@@ -394,15 +379,15 @@ if ( true === GLASS_CLASSES )
         global $glassDB;
 
         if( isset( $_GET[ 'pluginActivate' ] ) ):
-            $pluginToActivate = $_GET[ 'pluginActivate' ];
+            $pluginToActivate = htmlspecialchars( $_GET[ 'pluginActivate' ] );
             $glassDB->activatePlugin($pluginToActivate);
         endif;
         if( isset( $_GET[ 'pluginDeactivate' ] ) ):
-            $pluginToDeactivate = $_GET[ 'pluginDeactivate' ];
+            $pluginToDeactivate = htmlspecialchars( $_GET[ 'pluginDeactivate' ] );
             $glassDB->deactivatePlugin($pluginToDeactivate);
         endif;
         if( isset( $_GET[ 'pluginDelete' ] ) ):
-            $pluginId = $_GET[ 'pluginDelete' ];    
+            $pluginId = htmlspecialchars( $_GET[ 'pluginDelete' ] );    
             if( $glassDB->selectThePlugin( $pluginId )['activated'] == 1 ):
                 header('plugins.php');
             else:
@@ -426,8 +411,9 @@ if ( true === GLASS_CLASSES )
  * @param string $pathPrefix  the initial path for start searching. 
  * @return array              The array containing the files in folders/subfolders given
  */
-function readFolders( $pathPrefix )
+function readFolders( $pathPrefix, array $ignore = [] )
 {
+    $ignore[ 'ignore_old' ] = $ignore;
     $pathLastCharachter = $pathPrefix[ strlen($pathPrefix) - 1 ];
 
     //in case the path is missing a fwr/bck slash, it will be added preventing mistakes.
@@ -441,6 +427,12 @@ function readFolders( $pathPrefix )
     $resultFolders[] = $pathPrefix;
     $files = array();
     $scannedFolders = array();
+
+    foreach( $ignore[ 'ignore_old' ] as $ignored_path )
+    {
+        $ignore[] = $pathPrefix.$ignored_path;
+    }
+    unset( $ignore[ 'ignore_old' ] );
 
     startscan: //where we may need to iterate in case we haven't read all subfolders.
     foreach( array_keys( $folders ) as $folder ):
@@ -462,6 +454,11 @@ function readFolders( $pathPrefix )
             endif;
 
             if( $item == '.' || $item == '..' ): continue; endif;
+
+            if( in_array( $actualItem, $ignore ) ):
+                continue;
+            endif;
+
             if( in_array( $actualItem.'/', array_keys( $folders ) ) ):
                 continue;
             endif;
@@ -556,7 +553,7 @@ function readFolder( $pathPrefix )
 
     endforeach;
 
-    krsort( $folders );
+    krsort( $resultFolders );
 
     $newFiles = array();
     
@@ -605,7 +602,350 @@ function deleteFiles( $fileArray )
  */
 function deleteFolders( $folderArray )
 {
-    foreach ($folderArray as $folder ): rmdir( $folder ); endforeach;
+    foreach ( $folderArray as $folder ): rmdir( $folder ); endforeach;
+}
+
+/**
+ * This function verifies if Glass is up to date.
+ * Case positive, when required by the developer / app admin, it updates from the latest Release in Github.
+ * 
+ * @uses get_update()     Function to retrieve last release from Github.
+ * @uses glass_update()   Function that downloads and processes the update process.
+ * 
+ * @since 0.7.0
+ *
+ * @return string
+ */
+function verify_update( $return = false )
+{
+    global $glass_update, $glass_version;
+
+    if( ! file_exists( GLASS_DIR . 'keys/update.json' ) ):
+
+        $the_version    = get_update( $glass_update );
+        $latest_version = explode( '.', str_replace( 'v', '', $the_version->tag_name ) );
+
+    else:
+        $the_version = json_decode( file_get_contents( GLASS_DIR . 'keys/update.json' ) );
+
+        if( $the_version->check_at <= strtotime( 'now' ) )
+        {
+            $the_version = get_update( $glass_update );
+        }
+
+        $latest_version = explode( '.', str_replace( 'v', '', $the_version->tag_name ) );
+    endif;
+    
+    $this_version = explode( '.', $glass_version );
+
+    for( $i = 0; $i < count( $this_version ); $i++ )
+    {
+        switch( $i )
+        {
+            case 0:
+                $this_version  [ 'MAJOR' ] = (int) $this_version  [ $i ];
+                $latest_version[ 'MAJOR' ] = (int) $latest_version[ $i ];
+            break;
+            case 1:
+                $this_version  [ 'MINOR' ] = (int) $this_version  [ $i ];
+                $latest_version[ 'MINOR' ] = (int) $latest_version[ $i ];
+            break;
+            case 2:
+                $this_version  [ 'PATCH' ] = (int) $this_version  [ $i ];
+                $latest_version[ 'PATCH' ] = (int) $latest_version[ $i ];
+            break;
+        }
+
+        unset( $this_version  [ $i ] );
+        unset( $latest_version[ $i ] );
+    }
+
+    $this_version  [ 'version' ] = implode( '.', $this_version );
+    $latest_version[ 'version' ] = implode( '.', $latest_version );
+
+    if( ! ( $this_version === $latest_version ) )
+    {
+        if( $this_version['PATCH'] < $latest_version[ 'PATCH' ] ): $msg = 'Patch'; endif;
+        if( $this_version['MINOR'] < $latest_version[ 'MINOR' ] ): $msg = 'Minor'; endif;
+        if( $this_version['MAJOR'] < $latest_version[ 'MAJOR' ] ): $msg = 'Major'; endif;
+
+        $div_style = "margin: 5px auto; padding: 25px; font-family: courier, Sans Serif; text-align: center";
+        printf( "<div style=\"{$div_style}\">New %s Update Available for Glass! Download now: <strong>Glass %s</strong></div>", $msg, $latest_version[ 'version' ] );
+
+        /** 
+         * To create a routine and update Glass you can use:
+         * glass_update( verify_update( true ) );
+         * 
+         * OR
+         * 
+         * By default you can run it as a hook to only verify the version.
+         * After, you can retrieve its data to get a path as shown above.
+         */
+        if( $return === true )
+        {
+            return $the_version->zipball_url;
+        }
+    }
+}
+
+/**
+ * This function sends a request to the Glass Github and verifies if the actual version
+ * running in the server is up to date.
+ * 
+ * @since 0.7.0
+ *
+ * @param  APIConsummer $glass_update
+ * @return object
+ */
+function get_update( APIConsummer &$glass_update ) : object
+{
+    $headers = array(
+        "Content-Type: application/json",
+        "User-Agent: Glass",
+        'Accept: application/json',
+    );
+
+    $glass_update->set_headers( $headers );
+    $glass_update->set_query( 'repos/kesc23/Glass/releases' );
+
+    $response = (object) ( $glass_update->get_request( GLASS_SSL , true , true ) )[0];
+
+    $update = (object) array(
+        'tag_name'      => $response->tag_name,
+        'zipball_url'   => $response->zipball_url,
+        'check_at'      => strtotime( 'now' ) + ( 3600 ),
+    );
+
+    file_put_contents( GLASS_DIR . 'keys/update.json', json_encode( $update ) );
+
+    return $update;
+}
+
+/**
+ * This function create the routine to download a .zip file and update a content inside Glass Directory.
+ * 
+ * @since 0.7.0
+ *
+ * @param  string $url    The url for the zip file to be downloaded.
+ * @return void
+ */
+function glass_update( string $url ) : void
+{
+    /**
+     * STEP 1:
+     * 
+     * This section creates the update folder case it doesn't exist.
+     * Then it puts a .htacess file to protect it denying from all.
+     */
+    $update_folder = @opendir( GLASS_DIR .'update' );
+
+    if( ! $update_folder )
+    {
+        //creates the update folder.
+        mkdir( GLASS_DIR .'update', 0700, true );
+
+        // Protects the folder
+        file_put_contents( GLASS_DIR . 'update/.htaccess', 'deny from all' );
+    }
+
+    /**
+     * STEP 2:
+     * 
+     * This step checks for the update file. If it doesn't exists, it will be downloaded
+     * from github.
+     * 
+     * Then as it creates a main folder with (not) a good name, it is renamed to 'Glass/' and then
+     * we track all files based on glass folder hierarchy.
+     */
+    if( ! file_exists( GLASS_DIR . 'update/glass_update.zip' ) ):
+
+        $opts = array(
+            'http' => array(
+                'method' => "GET",
+                'header' => "User-Agent: Glass Updater"
+            ),
+        );
+
+        $zip_file = file_get_contents( $url, false, stream_context_create( $opts ), 0, 999999);
+        file_put_contents( GLASS_DIR . 'update/glass_update.zip', $zip_file );
+    endif;
+
+    $the_file = new \ZipArchive;
+    $the_file->open( GLASS_DIR . 'update/glass_update.zip' ); 
+
+    if( $the_file->getNameIndex( 0 ) !== 'Glass/' )
+    {
+        $base_folder = $the_file->getNameIndex( 0 );
+        $data        = true;
+        $folders     = array();
+        $files       = array();
+
+        for( $i = 0; $data !== false; $i++ )
+        {
+            $path = str_replace( $base_folder, '', $the_file->getNameIndex( $i ) );
+            $data = $the_file->getFromIndex( $i, 999999 );
+
+            if( @strpos( $path, '/', -1 ) ):
+                $folders[] = $path;
+            elseif( ! empty( $path ) ):
+                $files[] = $path;
+            endif;
+
+            if( ! ( false === $data ) && ! in_array( $path, $folders ) )
+            {
+                $result[ str_replace( '\\', '/', GLASS_DIR . 'update/updated/glass/' ) . $path ] = $data;
+            }
+        }
+        if( strpos( ( array_keys( $result ) )[ 0 ], '/', -1 ) ): unset( $result[ ( array_keys( $result ) )[ 0 ] ] ); endif;
+    }
+
+    $the_file->close();
+
+    /**
+     * STEP 3:
+     * 
+     * If there's any additional folder to be created to complete installation, it's created
+     * and then the files are created or overwritten.
+     */
+    glass_update:
+
+    $root_path =  GLASS_DIR;
+    $updated_folder = @opendir( $root_path );
+
+    if( $updated_folder ):
+
+        if( ! is_dir( $root_path ) )
+        {
+            mkdir( $root_path, 0700, true );
+        }
+
+        foreach( $folders as $dir )
+        {
+            if( ! is_dir( $root_path . $dir ) )
+            {
+                mkdir( $root_path . $dir, 0700, true );
+            }
+        }
+
+        foreach( $result as $path => $file )
+        {
+
+            if( ! file_exists( $path ) )
+            {
+                $created_file = fopen( $path, 'x+' );
+                fclose( $created_file );
+            }
+
+            file_put_contents( $path, $file );
+        }
+
+    else:
+
+        mkdir( $root_path, 0700, true );
+        goto glass_update;
+
+    endif;
+
+    closedir( $updated_folder );
+    closedir( $update_folder );
+}
+
+function create_jwt_file()  
+{
+    $jwt    = ( new Glass\GlassJWT() )::$token; // @uses GlassJWT
+    $aToken = serialize( $jwt );
+
+    file_put_contents( GLASS_DIR . 'keys/token.jwt', $aToken );
+
+    return $jwt;
+}
+
+function create_gittoken_file( string $bearer_token, Glass\APIConsummer &$APIObject )
+{
+    $headers = array(
+        "Content-Type: application/json",
+        "User-Agent: Glass",
+        'Accept: application/json',
+        "Authorization: Bearer $bearer_token",
+    );
+
+    $APIObject->set_headers( $headers );
+    $APIObject->set_query( 'app/installations/18639944/access_tokens' );
+
+    $response = (object) ( $APIObject->post_request( GLASS_SSL , true , true ) );
+
+    $gitToken[ 'token' ]      = $response->token;
+    $gitToken[ 'expires_at' ] = strtotime( 'now' ) + ( 3600 );
+
+    $gitToken = (object) $gitToken;
+
+    file_put_contents( GLASS_DIR . 'keys/token.github', serialize( $gitToken ) );
+    
+    return $gitToken->token;
+}
+
+function replace_full( $variable = '' )
+{
+    $j = "\n<br>"; // The jumper
+
+    $pattern = array(
+        '/\<\?php/',
+        '/\?\>/',
+        '/\<div\>/',
+        '/\<\/div\>/',
+        '/\<html\>/',
+        '/\<\/html\>/',
+        '/\<img\>/',
+        '/\<canvas\>/',
+        '/\<\/canvas\>/',
+        '/\<option\>/',
+        '/\<span\>/',
+        '/\<\/span\>/',
+        '/\<style\>/',
+        '/\<\/style\>/',
+        '/\<script\>/',
+        '/\<\/script\>/',
+        '/\<pre\>/',
+        '/\<\/pre\>/',
+        '/ \> \n/',
+    );
+
+    $replace = array(
+        "=:phptag:=",
+        "=:phpendtag:=",
+        "=:divtag:=",
+        "=:divendtag:=",
+        '=:htmltag:=',
+        '=:htmlendtag:=',
+        '=:imgtag:=',
+        '=:canvastag:=',
+        '=:canvasendtag:=',
+        '=:optiontag:=',
+        '=:spantag:=',
+        '=:spanendtag:=',
+        '=:styletag:=',
+        '=:styleendtag:=',
+        '=:scripttag:=',
+        '=:scriptendtag:=',
+        '=:pretag:=',
+        '=:preendtag:=',
+        '=:endtag:=',
+    );
+
+    if( is_array( $variable ) ):
+
+        foreach( $variable as $key => $the_data )
+        {
+            $result[ $key ] = $j.preg_replace( $pattern, $replace, $the_data );
+        }
+        return $result;
+    else:
+        for( $i = 0; $i < count( $pattern ); $i++ )
+        {
+            preg_replace( $pattern[ $i ], $replace[ $i ], $variable );
+        }
+        return $variable;
+    endif;
 }
 
 function sayHello()

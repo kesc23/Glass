@@ -27,9 +27,10 @@ function glassInit()
     if( true === GLASS_CLASSES ): glassRequire( 'ClassAutoLoader.php' ); endif;    
 
     if( isset( $filesLoaded[ CLASSES . 'ClassHook.php' ] ) ):
-        addhook( 'init', 'fileLoadDebug', '', 15 );
+        addhook( 'debug', 'file_load_log', '', 0 );
+        addHook( 'init', 'doHook', 'debug', 15 );
     else:
-        fileLoadDebug();
+        file_load_log();
     endif;
 }
 
@@ -38,6 +39,7 @@ function glassInit()
  * 
  * @since 0.1.0
  * @since 0.6.0  changed file load dumping/debugging.
+ * @since 0.7.0  Verifies for the last character, validating a folder path.
  *
  * @param string $fileToLoad    File to load in the program
  * @param string $directory     Path to the file. it accepts path inside constants
@@ -46,8 +48,13 @@ function glassRequire( string $fileToLoad, string $directory = GLASS_DIR )
 {
     global $filesLoaded;
 
+    if( ! strpos( $directory, '/', -1 ) )
+    {
+        $directory .= '/';
+    }
+
     try{
-        if ( 0 == file_exists( $directory . $fileToLoad ) ) : throw new Exception('File DOES NOT Exists');
+        if ( 0 == file_exists( $directory . $fileToLoad ) ) : throw new Exception( 'File DOES NOT Exists' );
         endif;
     } catch (Exception $e) {
         echo '<pre>Error while requiring file "'.$fileToLoad.'": ', $e->getMessage(), "</pre>";
@@ -66,6 +73,7 @@ function glassRequire( string $fileToLoad, string $directory = GLASS_DIR )
  *
  * @since 0.1.0
  * @since 0.6.0  changed file load dumping/debugging.
+ * @since 0.7.0  Verifies for the last character, validating a folder path.
  * 
  * @param string $fileToLoad    File to load in the program
  * @param string $directory     Path to the file. it accepts path inside constants
@@ -74,8 +82,13 @@ function glassInclude( string $fileToLoad, string $directory = GLASS_DIR )
 {
     global $filesLoaded;
 
+    if( ! strpos( $directory, '/', -1 ) )
+    {
+        $directory .= '/';
+    }
+
     try{
-        if ( 0 == file_exists( $directory . $fileToLoad ) ) : throw new Error('File DOES NOT Exists');
+        if ( 0 == file_exists( $directory . $fileToLoad ) ) : throw new Error( 'File DOES NOT Exists' );
         endif;
     } catch (Error $e) {
         echo '<pre>Error while incluiding file "'.$fileToLoad.'": ', $e->getMessage(), "</pre>";

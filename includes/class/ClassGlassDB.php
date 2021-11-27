@@ -103,14 +103,16 @@ final class GlassDB
      */
     public function selectPlugins()
     {
-        $stmt = $this->getConnection()->prepare('SELECT * FROM plugins');
+        $stmt = $this->getConnection()->prepare( "SELECT * FROM plugins" );
         $stmt->execute();
         $allPlugins = $stmt->fetchAll( PDO::FETCH_ASSOC );
 
         $pluginsResult = null;
-        foreach( $allPlugins as $plugin ):
+
+        foreach( $allPlugins as $plugin ) {
             $pluginsResult[ $plugin['id'] ][ $plugin['name'] ] = $plugin;
-        endforeach;
+        }
+
         return $pluginsResult;
     }
 
@@ -148,6 +150,8 @@ final class GlassDB
      */
     public function selectThePlugin( $pluginId )
     {
+        $pluginId = filter_var( $pluginId, FILTER_SANITIZE_NUMBER_INT );
+        
         $sql  = "SELECT * FROM `plugins` WHERE `id` = '{$pluginId}'";
         $stmt = $this->getConnection()->prepare( $sql );
         $stmt->execute();
@@ -174,6 +178,8 @@ final class GlassDB
      */
     public function addPlugins( $name )
     {
+        $name = filter_var( $name, FILTER_SANITIZE_STRING );
+
         $sql = "INSERT INTO `plugins` (`name`) VALUE ('{$name}')";
         $stmt = $this->getConnection()->prepare($sql);
 
@@ -208,9 +214,9 @@ final class GlassDB
      */
     public function getPlugin( $pluginName )
     {
-        //This is used for verifying and deleting existing data in DB about exluded plugins.
+        //This is used for verifying and deleting existing data in DB about excluded plugins.
         if( ! isset( $this->plugins[ $pluginName ] ) && isset( $this->selectPluginNames()[ $pluginName ] ) ):
-            $this->deletePlugin( $this->selectPluginNames()[ $pluginName ]['id'] );
+            $this->deletePluginInDB( $this->selectPluginNames()[ $pluginName ]['id'] ); 
         else:
             return $this->plugins[ $pluginName ];
         endif;
@@ -227,7 +233,9 @@ final class GlassDB
      */
     public function activatePlugin( $pluginId )
     {
-        $stmt = $this->getConnection()->prepare("UPDATE `plugins` SET `activated` = '1' WHERE `plugins`.`id` = '".$pluginId."'");
+        $pluginId = filter_var( $pluginId, FILTER_SANITIZE_NUMBER_INT );
+
+        $stmt = $this->getConnection()->prepare("UPDATE `plugins` SET `activated` = '1' WHERE `plugins`.`id` = '{$pluginId}'");
         $stmt->execute();
 
         header('Location: plugins.php');
@@ -244,7 +252,9 @@ final class GlassDB
      */
     public function deactivatePlugin( $pluginId )
     {
-        $stmt = $this->getConnection()->prepare("UPDATE `plugins` SET `activated` = '0' WHERE `plugins`.`id` = '".$pluginId."'");
+        $pluginId = filter_var( $pluginId, FILTER_SANITIZE_NUMBER_INT );
+
+        $stmt = $this->getConnection()->prepare("UPDATE `plugins` SET `activated` = '0' WHERE `plugins`.`id` = '{$pluginId}'");
         $stmt->execute();
 
         header('Location: plugins.php');
@@ -258,6 +268,7 @@ final class GlassDB
      * 3 - At last, it deletes the plugin data from the Glass DB.
      *
      * @since 0.5.0
+     * @since 0.7.0   Added call to deletePluginInDB to fix deletion of unregistered plugins.
      * 
      * @param integer $pluginId
      * @subpackage    GlassDB
@@ -265,14 +276,16 @@ final class GlassDB
      */
     public function deletePlugin( $pluginId )
     {
+        $pluginId = filter_var( $pluginId, FILTER_SANITIZE_NUMBER_INT );
+
         $pluginName = $this->selectThePlugin( $pluginId )[ 'name' ];
 
+        if( empty( $pluginName ) ): return; endif;
+        
         $thePaths = null;
         $pathPrefix = PLUGINS_DIR . "{$pluginName}/";
 
         $stuffOnThePluginFolder = readFolders( $pathPrefix );
-
-        if( empty($pluginName) ): return; endif;
 
         $thisPluginFiles   = $stuffOnThePluginFolder[ 'files' ];
         $thisPLuginFolders = $stuffOnThePluginFolder[ 'folders' ];
@@ -284,12 +297,29 @@ final class GlassDB
             deleteFolders( $thisPLuginFolders );
         endif;
 
+        $this->deletePluginInDB( $pluginId );
+
+        header('Location: plugins.php');
+        
+    }
+
+    /**
+     * This function only deletes the plugin from the Database.
+     * 
+     * @since 0.7.0
+     *
+     * @param  integer  $pluginId    The plugin Id inside the Database.
+     * @return boolean               It will always return true.
+     */
+    private function deletePluginInDB( int $pluginId ) : bool
+    {
+        $pluginId = filter_var( $pluginId, FILTER_SANITIZE_NUMBER_INT );
+
         $sql  = "DELETE FROM `plugins` WHERE `plugins`.`id` = '{$pluginId}'";
         $stmt = $this->getConnection()->prepare( $sql );
         $stmt->execute();
 
-        header('Location: plugins.php');
-        
+        return true;
     }
 
     /**
@@ -304,7 +334,9 @@ final class GlassDB
      */
     public function updatePluginInfo( $pluginId, $property, $value )
     {
-        $stmt = $this->getConnection()->prepare("UPDATE `plugins` SET `{$property}` = '{$value}' WHERE `plugins`.`id` = '".$pluginId."'");
+        $pluginId = filter_var( $pluginId, FILTER_SANITIZE_NUMBER_INT );
+                
+        $stmt = $this->getConnection()->prepare("UPDATE `plugins` SET `{$property}` = '{$value}' WHERE `plugins`.`id` = '{$pluginId}'");
         $stmt->execute();
     }
 

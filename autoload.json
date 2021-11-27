@@ -1,0 +1,25 @@
+{
+    "packages":[
+        {
+            "namespace_name": "Glass",
+            "names": [
+                "GlassDB",
+                "APIConsummer",
+                "Plugins",
+                "Hook",
+                "Styles",
+                "Voyage",
+                "GlassJWT",
+                "DOM",
+                "AMPDOM"
+            ]
+        }
+    ],
+    "spaces": [
+        {
+            "name": "Glass",
+            "namespace": "MartinFields\\Glass\\",
+            "path": "includes/class/"
+        }
+    ]
+}
